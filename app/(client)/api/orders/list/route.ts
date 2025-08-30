@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const orders = await backendClient.fetch(
-      `*[_type == 'order' && clerkUserId == $userId] | order(orderDate desc){
+      `*[_type == 'order' && userId == $userId] | order(orderDate desc){
         ...,products[]{...,product->}
       }`,
       { userId: uid }

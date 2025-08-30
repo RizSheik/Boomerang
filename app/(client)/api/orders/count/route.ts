@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const count = await backendClient.fetch(
-      "count(*[_type == 'order' && clerkUserId == $userId])",
+      "count(*[_type == 'order' && userId == $userId])",
       { userId: uid }
     );
 
