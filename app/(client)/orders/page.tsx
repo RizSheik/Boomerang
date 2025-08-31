@@ -8,85 +8,76 @@ import { Table, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileX } from "lucide-react";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import NoAccess from "@/components/NoAccess";
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState<any[]>([]);
-  const [uid, setUid] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUid(user.uid);
-        const res = await fetch(`/api/orders/list?uid=${user.uid}`, {
-          cache: "no-store",
-        });
-        const json = await res.json();
-        setOrders(json?.orders ?? []);
-      } else {
-        setUid(null);
-        setOrders([]);
-      }
-    });
-    return () => unsub();
-  }, []);
+    if (user) {
+      // Fetch orders when user is authenticated
+      const fetchOrders = async () => {
+        try {
+          const res = await fetch(`/api/orders/list?uid=${user.uid}`, {
+            cache: "no-store",
+          });
+          const json = await res.json();
+          setOrders(json?.orders ?? []);
+        } catch (error) {
+          console.error("Error fetching orders:", error);
+          setOrders([]);
+        }
+      };
+      
+      fetchOrders();
+    } else {
+      setOrders([]);
+    }
+  }, [user]);
 
-  if (!uid) {
+  if (!user) {
     return <NoAccess details="Log in to view your orders." />;
   }
 
   return (
     <div>
       <Container className="py-10">
-        {orders?.length ? (
-          <Card className="w-full">
-            <CardHeader>
-              <CardTitle>Order List</CardTitle>
-            </CardHeader>
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-3xl font-bold">My Orders</h1>
+        </div>
+
+        {orders.length === 0 ? (
+          <Card className="text-center py-12">
             <CardContent>
-              <ScrollArea>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px] md:w-auto">
-                        Order Number
-                      </TableHead>
-                      <TableHead className="hidden md:table-cell">
-                        Date
-                      </TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead className="hidden sm:table-cell">
-                        Email
-                      </TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="hidden sm:table-cell">
-                        Invoice Number
-                      </TableHead>
-                      <TableHead className="text-center">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <OrdersComponent orders={orders as any} />
-                </Table>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+              <FileX className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No orders yet</h3>
+              <p className="text-muted-foreground mb-4">
+                You haven't placed any orders yet. Start shopping to see your orders here.
+              </p>
+              <Button asChild>
+                <Link href="/shop">Browse Products</Link>
+              </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-            <FileX className="h-24 w-24 text-gray-400 mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-900">
-              No orders found
-            </h2>
-            <p className="mt-2 text-sm text-gray-600 text-center max-w-md">
-              It looks like you haven&apos;t placed any orders yet. Start
-              shopping to see your orders here!
-            </p>
-            <Button asChild className="mt-6">
-              <Link href="/">Browse Products</Link>
-            </Button>
+          <div className="space-y-6">
+            {orders.map((order) => (
+              <Card key={order._id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Order #{order.orderNumber}</span>
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <OrdersComponent order={order} />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         )}
       </Container>

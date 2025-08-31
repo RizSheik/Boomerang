@@ -1,0 +1,56 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection - only allow users to read/write their own data
+    // Admin role can only be set by the system, not by users
+    match /users/{userId} {
+      // Allow users to read their own data
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow users to create their own profile (but not modify role)
+      allow create: if request.auth != null && 
+                     request.auth.uid == userId && 
+                     request.resource.data.uid == userId &&
+                     request.resource.data.email == request.auth.token.email &&
+                     request.resource.data.role in ['admin', 'user'];
+      
+      // Allow users to update their own profile (but not modify role)
+      allow update: if request.auth != null && 
+                     request.auth.uid == userId && 
+                     request.resource.data.uid == userId &&
+                     request.resource.data.email == request.auth.token.email &&
+                     request.resource.data.role == resource.data.role; // Role cannot be changed
+      
+      // Only allow deletion by the user themselves
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Products collection - allow read for everyone, write for admin only
+    match /products/{productId} {
+      allow read: if true; // Anyone can read products
+      allow write: if request.auth != null && 
+                    request.auth.token.email == 'bhoomerang983@gmail.com'; // Only hardcoded admin
+    }
+    
+    // Orders collection - allow read for users (their own orders) and admin
+    match /orders/{orderId} {
+      allow read: if request.auth != null && 
+                   (resource.data.userId == request.auth.uid || 
+                    request.auth.token.email == 'bhoomerang983@gmail.com');
+      allow write: if request.auth != null && 
+                    request.auth.token.email == 'bhoomerang983@gmail.com'; // Only admin can create/modify orders
+    }
+    
+    // Categories collection - allow read for everyone, write for admin only
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if request.auth != null && 
+                    request.auth.token.email == 'bhoomerang983@gmail.com';
+    }
+    
+    // Default rule - deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

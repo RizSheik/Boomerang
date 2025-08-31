@@ -8,24 +8,21 @@ import CartIcon from "./CartIcon";
 import FavoriteButton from "./FavoriteButton";
 import SignIn from "./SignIn";
 import MobileMenu from "./MobileMenu";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { Logs } from "lucide-react";
+import { Logs, Wifi, WifiOff } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 import Image from "next/image";
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 
 const Header = () => {
-  const [userId, setUserId] = useState<string | null>(null);
+  const { user, isAdmin, signOut, isOnline } = useAuth();
   const [ordersCount, setOrdersCount] = useState<number>(0);
-  const [photoURL, setPhotoURL] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUserId(user.uid);
-        setPhotoURL(user.photoURL ?? null);
+    if (user) {
+      // Fetch orders count when user is authenticated
+      const fetchOrdersCount = async () => {
         try {
           const res = await fetch(`/api/orders/count?uid=${user.uid}`, {
             cache: "no-store",
@@ -35,17 +32,24 @@ const Header = () => {
         } catch {
           setOrdersCount(0);
         }
-      } else {
-        setUserId(null);
-        setPhotoURL(null);
-        setOrdersCount(0);
-      }
-    });
-    return () => unsub();
-  }, []);
+      };
+      
+      fetchOrdersCount();
+    } else {
+      setOrdersCount(0);
+    }
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-50 py-4 bg-card/80 backdrop-blur-md border-b border-border shadow-sm">
+      {/* Offline Status Bar */}
+      {!isOnline && (
+        <div className="bg-yellow-500 text-yellow-900 px-4 py-2 text-center text-sm font-medium">
+          <WifiOff className="inline h-4 w-4 mr-2" />
+          You're offline. Some features may not work properly.
+        </div>
+      )}
+      
       <Container className="flex items-center justify-between text-foreground">
         <div className="w-auto md:w-1/3 flex items-center gap-2.5 justify-start md:gap-0">
           <MobileMenu />
@@ -58,12 +62,21 @@ const Header = () => {
           <FavoriteButton />
           <ThemeToggle />
 
+          {/* Online/Offline Status Indicator */}
+          <div className="flex items-center gap-2">
+            {isOnline ? (
+              <Wifi className="h-4 w-4 text-green-600" />
+            ) : (
+              <WifiOff className="h-4 w-4 text-yellow-600" />
+            )}
+          </div>
+
           <Popover>
             <PopoverTrigger asChild>
               <button className="flex items-center gap-2 hover:opacity-90">
-                {photoURL ? (
+                {user?.photoURL ? (
                   <Image
-                    src={photoURL}
+                    src={user.photoURL}
                     alt="Profile"
                     width={28}
                     height={28}
@@ -71,26 +84,31 @@ const Header = () => {
                   />
                 ) : (
                   <span className="text-sm font-semibold hover:text-darkColor text-lightColor hoverEffect">
-                    {userId ? "Account" : "Login"}
+                    {user ? "Account" : "Login"}
                   </span>
                 )}
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-56 p-2">
               <div className="flex flex-col gap-1">
-                {userId && (
+                {user && (
                   <Link href="/orders" className="px-2 py-1.5 rounded hover:bg-muted">
                     Orders
                   </Link>
                 )}
-                {userId && (
-                  <Link href="/studio" className="px-2 py-1.5 rounded hover:bg-muted">
-                    Admin
+                {isAdmin && (
+                  <Link href="/admin" className="px-2 py-1.5 rounded hover:bg-muted">
+                    Admin Dashboard
                   </Link>
                 )}
-                {userId ? (
+                {isAdmin && (
+                  <Link href="/studio" className="px-2 py-1.5 rounded hover:bg-muted">
+                    Sanity Studio
+                  </Link>
+                )}
+                {user ? (
                   <button
-                    onClick={() => signOut(auth)}
+                    onClick={signOut}
                     className="text-left px-2 py-1.5 rounded hover:bg-muted"
                   >
                     Logout

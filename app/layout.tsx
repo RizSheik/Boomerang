@@ -1,5 +1,7 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import { AuthProvider } from "@/contexts/AuthContext";
+
 const RootLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <html lang="en" suppressHydrationWarning>
@@ -12,7 +14,9 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
         />
       </head>
       <body className="font-poppins antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Toaster
           position="bottom-right"
           toastOptions={{
@@ -26,4 +30,5 @@ const RootLayout = ({ children }: { children: React.ReactNode }) => {
     </html>
   );
 };
+
 export default RootLayout;

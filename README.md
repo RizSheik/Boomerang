@@ -2,6 +2,8 @@
 
 A modern e-commerce platform built with Next.js, Sanity CMS, Stripe payments, and Firebase authentication.
 
+**Latest Update**: Build issues resolved and ready for Vercel deployment! 🚀
+
 ## Features
 
 - 🛍️ **E-commerce**: Product catalog, shopping cart, and checkout
